@@ -1,0 +1,9 @@
+pandas
+numpy
+ipykernel
+kagglehub
+valentine
+matplotlib
+seaborn
+scikit-learn
+missingno
