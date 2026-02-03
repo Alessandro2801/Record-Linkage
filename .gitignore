@@ -1,6 +1,9 @@
 # Datasets
 datasets/
 
+# Models
+models/
+
 # PDF files
 *.pdf
 
