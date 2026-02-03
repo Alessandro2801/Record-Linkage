@@ -136,7 +136,7 @@ def create_dedupe_dict(df: pd.DataFrame, ids: set) -> dict:
     df_subset = df.loc[df.index.isin(ids)]
     
     # Seleziona TUTTE le colonne necessarie per il modello
-    # Questo è il FIX: il notebook originale non includeva tutte le colonne
+        # Questo è il FIX: il notebook originale non includeva tutte le colonne
     records = {}
     for idx, row in df_subset.iterrows():
         record = {}
