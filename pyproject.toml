@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "record-linkage"
+version = "0.1.0"
+description = "Pipeline per Record Linkage tra dataset di auto usate"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Author"}
+]
+keywords = ["record-linkage", "data-engineering", "deduplication", "entity-resolution"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "recordlinkage",
+    "dedupe",
+    "joblib",
+    "kagglehub",
+    "valentine",
+    "matplotlib",
+    "seaborn",
+    "missingno",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ipykernel",
+    "jupyter",
+    "pytest",
+]
+
+[project.scripts]
+record-linkage = "run_pipeline:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "config*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.json"]
