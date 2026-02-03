@@ -3,12 +3,18 @@
 run_pipeline.py
 Entry point principale per l'esecuzione della pipeline di Record Linkage.
 
+Supporta due modalità:
+- Traditional: Record Linkage con Logistic Regression (veloce, CPU)
+- Ditto: Entity Matching con Transformer (ottimizzato H200)
+
 Usage:
-    python run_pipeline.py --step all         # Esegue tutto
-    python run_pipeline.py --step download    # Solo download datasets
-    python run_pipeline.py --step schema      # Solo schema mediato
-    python run_pipeline.py --step ground_truth  # Solo ground truth
-    python run_pipeline.py --step train       # Solo training modello
+    python run_pipeline.py --step all             # Esegue tutto (traditional)
+    python run_pipeline.py --step download        # Solo download datasets
+    python run_pipeline.py --step schema          # Solo schema mediato
+    python run_pipeline.py --step ground_truth    # Solo ground truth
+    python run_pipeline.py --step train           # Training traditional
+    python run_pipeline.py --step ditto           # Training Ditto (H200)
+    python run_pipeline.py --step ditto_eval      # Evaluation Ditto
 """
 
 import argparse
@@ -39,7 +45,8 @@ def run_step(script_path: str, args: list = None):
 def main():
     parser = argparse.ArgumentParser(description='Pipeline Record Linkage - Entry Point')
     parser.add_argument('--step', type=str, required=True,
-                        choices=['all', 'download', 'schema', 'ground_truth', 'train'],
+                        choices=['all', 'download', 'schema', 'ground_truth', 'train', 
+                                'ditto', 'ditto_eval', 'ditto_inference'],
                         help='Step da eseguire')
     parser.add_argument('--base-path', type=str, default='.',
                         help='Path base del progetto')
@@ -52,11 +59,12 @@ def main():
     schema_script = os.path.join(base_path, 'src/schema/mediated_schema.py')
     gt_script = os.path.join(base_path, 'src/schema/ground_truth.py')
     train_script = os.path.join(base_path, 'src/pipelines/record_linkage.py')
+    ditto_script = os.path.join(base_path, 'src/pipelines/ditto_pipeline.py')
     
     print("=" * 60)
-    print("RECORD LINKAGE PIPELINE")
-    print(f"Base path: {base_path}")
-    print(f"Step: {args.step}")
+    print("🚀 RECORD LINKAGE PIPELINE")
+    print(f"📁 Base path: {base_path}")
+    print(f"🎯 Step: {args.step}")
     print("=" * 60)
     
     script_args = ['--base-path', base_path]
@@ -78,6 +86,20 @@ def main():
         
     elif args.step == 'train':
         run_step(train_script, script_args + ['--train'])
+    
+    # ========== DITTO STEPS (Auto-Optimized) ==========
+    elif args.step == 'ditto':
+        print("\n🚀 DITTO - Entity Matching con Transformer")
+        print("   Auto-detection hardware per configurazione ottimale")
+        run_step(ditto_script, script_args + ['--mode', 'train'])
+    
+    elif args.step == 'ditto_eval':
+        print("\n📊 DITTO H200 - Evaluation")
+        run_step(ditto_script, script_args + ['--mode', 'evaluate'])
+    
+    elif args.step == 'ditto_inference':
+        print("\n🔮 DITTO H200 - Inference")
+        run_step(ditto_script, script_args + ['--mode', 'inference'])
     
     print("\n" + "=" * 60)
     print("🎉 PIPELINE COMPLETATA!")

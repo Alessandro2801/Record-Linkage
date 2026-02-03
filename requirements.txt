@@ -1,12 +1,37 @@
-pandas
-numpy
+# Core Data Science
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# Jupyter
 ipykernel
+
+# Data acquisition
 kagglehub
+
+# Schema matching
 valentine
+
+# Visualization
 matplotlib
 seaborn
-scikit-learn
 missingno
+
+# Record Linkage (Traditional)
 recordlinkage
 dedupe
-joblibok 
+joblib
+
+# Ditto - Entity Matching (Deep Learning)
+torch>=2.1.0
+transformers>=4.36.0
+tokenizers>=0.15.0
+tqdm>=4.66.0
+accelerate>=0.25.0
+
+# Optional: monitoring
+# wandb>=0.16.0
+# tensorboard>=2.15.0
+
+# Per installare PyTorch con CUDA 12.1 (H200):
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121

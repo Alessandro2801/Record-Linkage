@@ -2,6 +2,8 @@
 """
 settings.py
 Configurazione centralizzata per il progetto Record-Linkage.
+
+Supporta sia il modello tradizionale (Logistic Regression) che Ditto (Transformer).
 """
 
 import os
@@ -23,9 +25,11 @@ GROUND_TRUTH_DIR = DATA_DIR / "ground_truth"
 
 # Modelli
 MODELS_DIR = PROJECT_ROOT / "models"
+DITTO_MODEL_DIR = MODELS_DIR / "ditto"
 
-# Output
+# Output e Logs
 OUTPUTS_DIR = DATA_DIR / "outputs"
+LOGS_DIR = PROJECT_ROOT / "logs"
 
 # =============================================================================
 # FILE PATHS
@@ -81,7 +85,9 @@ def ensure_dirs():
         MEDIATED_SCHEMA_DIR,
         GROUND_TRUTH_DIR / "GT_train",
         MODELS_DIR,
-        OUTPUTS_DIR
+        DITTO_MODEL_DIR,
+        OUTPUTS_DIR,
+        LOGS_DIR
     ]
     for d in dirs:
         d.mkdir(parents=True, exist_ok=True)
