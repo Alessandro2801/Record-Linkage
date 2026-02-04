@@ -1,6 +1,7 @@
 import numpy as np
 import dedupe
 import os
+import json
 import sys
 import pandas as pd
 from sklearn.metrics import f1_score, precision_score, recall_score
@@ -12,7 +13,7 @@ project_root = os.path.dirname(os.path.dirname(current_dir))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from src.pipelines.train_dedupe import load_data, prepare_data_for_dedupe, create_dedupe_dict
+from src.trainings.train_dedupe import load_data, prepare_data_for_dedupe, create_dedupe_dict
 
 print(f"Project root: {project_root}")
 df_unificato, gt_train, gt_val, gt_test = load_data(project_root)
@@ -91,9 +92,27 @@ if len(test_scores) > 0:
     recall = recall_score(test_labels, test_predictions)
     f1 = f1_score(test_labels, test_predictions)
 
+    # 1. Creazione del dizionario con le metriche calcolate
+    metrics = {
+        "best_threshold": round(float(best_threshold), 2),
+        "precision": round(float(precision), 4),
+        "recall": round(float(recall), 4),
+        "f1-measure": round(float(f1), 4)
+    }
+
+    # 2. Definizione del percorso di output e creazione directory
+    output_path = os.path.join(project_root, "output/models/evaluate_dedupe.json")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # 3. Salvataggio su file JSON
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(metrics, f, indent=4)
+
+    # Print in console come feedback
     print(f"--- Risultati Test (Soglia: {best_threshold:.2f}) ---")
     print(f"Precision: {precision:.4f}")
     print(f"Recall:    {recall:.4f}")
     print(f"F1-Score:  {f1:.4f}")
+    print(f"\n✅ Metriche salvate in: {output_path}")
 else:
     print("Errore: Nessuna coppia di gt_test trovata nel dizionario dati.")

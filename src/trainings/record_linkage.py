@@ -9,12 +9,13 @@ Usage:
 
 import argparse
 import os
+import json
 import time
 import pandas as pd
 import numpy as np
 import recordlinkage as rl
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
+from sklearn.metrics import precision_score, recall_score, f1_score, classification_report, precision_recall_fscore_support
 import joblib
 
 
@@ -132,13 +133,34 @@ def tune_hyperparameters(X_train, y_train, X_val, y_val):
     return best_model, best_params
 
 
-def evaluate_model(model, X_test, y_test):
-    """Valuta il modello sul test set."""
+def evaluate_model(model, X_test, y_test, project_root):
+    """Valuta il modello sul test set e salva le metriche in JSON."""
     print("\n--- VALUTAZIONE FINALE SUL TEST SET ---")
     
     y_test_pred = model.predict(X_test)
     
+    # 1. Stampa il report classico in console
     print(classification_report(y_test, y_test_pred))
+    
+    # 2. Estrazione delle metriche per la classe positiva (assumendo label=1 per i match)
+    # pos_label=1 indica che vogliamo le metriche relative ai "match" reali
+    precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_test_pred, average='binary', pos_label=1)
+    
+    # 3. Creazione del dizionario JSON
+    metrics = {
+        "precision": round(float(precision), 4),
+        "recall": round(float(recall), 4),
+        "f1-measure": round(float(f1), 4)
+    }
+    
+    # 4. Definizione del percorso e salvataggio
+    output_path = os.path.join(project_root, "output/models/evaluate_record_linkage.json")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(metrics, f, indent=4)
+        
+    print(f"✅ Metriche del classificatore salvate in: {output_path}")
     
     return y_test_pred
 
@@ -188,7 +210,7 @@ def main():
         
         # Valutazione sul test set
         X_test, y_test = compute_features(compare, test_pairs, df_unificato, gt_test)
-        evaluate_model(best_model, X_test, y_test)
+        evaluate_model(best_model, X_test, y_test, base_path)
         
         # Salvataggio modello
         save_model(best_model, model_path)
@@ -199,7 +221,7 @@ def main():
         model = joblib.load(model_path)
         
         X_test, y_test = compute_features(compare, test_pairs, df_unificato, gt_test)
-        evaluate_model(model, X_test, y_test)
+        evaluate_model(model, X_test, y_test, base_path)
     
     else:
         print("\nSpecifica --train per addestrare o --evaluate per valutare")
