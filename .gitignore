@@ -1,11 +1,8 @@
 # General
 .DS_Store
 
-# Datasets
-datasets/
-data/
-
-# Models
+# Dati e modelli (generati dalla pipeline, non versionati)
+storage/
 models/
 wandb/
 

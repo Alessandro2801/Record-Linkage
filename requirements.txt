@@ -6,7 +6,10 @@ numpy>=1.24.0
 scikit-learn>=1.3.0
 
 # Jupyter
+jupyter
+notebook
 ipykernel
+nbformat
 
 # Data acquisition
 kagglehub
@@ -23,6 +26,7 @@ missingno
 recordlinkage
 dedupe
 joblib
+jellyfish
 
 # Ditto - Entity Matching (Deep Learning)
 torch>=2.1.0

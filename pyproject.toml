@@ -31,6 +31,7 @@ dependencies = [
     "dedupe",
     "joblib",
     "kagglehub",
+    "jellyfish",
     "valentine",
     "matplotlib",
     "seaborn",
@@ -49,7 +50,7 @@ record-linkage = "run_pipeline:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*", "config*"]
+include = ["src*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.json"]

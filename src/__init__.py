@@ -1,1 +1,1 @@
-# Record-Linkage source package
+# src — Record-Linkage project package
