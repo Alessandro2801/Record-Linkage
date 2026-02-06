@@ -1,0 +1,8 @@
+{
+    "include": ["src/**", "config/**", "trainings/**"],
+    "extraPaths": [
+        "./src/pipelines/ditto/FAIR-DA4ER/ditto"
+    ],
+    "pythonVersion": "3.10",
+    "typeCheckingMode": "basic"
+}

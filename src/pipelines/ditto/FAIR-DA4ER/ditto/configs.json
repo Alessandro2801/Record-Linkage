@@ -5,11 +5,10 @@
     "task_type": "classification",
     "vocab": ["0", "1"],
     "trainset": "data/ditto_data/train.txt",
-    "validset": "data/ditto_data/valid.txt",
+    "validset": "data/ditto_data/val.txt",
     "testset": "data/ditto_data/test.txt"
   },
    
-  
   {
     "name": "DA_Beer",
     "task_type": "classification",

@@ -1,12 +1,14 @@
-OUTPUT_PATH="data/fair/Abt-Buy/"
+# Crea la cartella se non esiste
+mkdir -p checkpoints
 
 python train_ditto.py \
-  --task DA_iTunes-Amazon \
-  --batch_size 64 \
-  --run_id 11 \
-  --logdir ${OUTPUT_PATH}log \
+  --task automotive_task \
+  --batch_size 32 \
+  --max_len 256 \
+  --lr 3e-5 \
+  --n_epochs 15 \
   --lm roberta \
-  --finetuning \
-  --lr 1.5e-5 \
-  --n_epochs 20 \
-  --device cuda \
+  --fp16 \
+  --save_model \
+  --logdir checkpoints/ \
+  --device cuda
