@@ -1,0 +1,4 @@
+Vogliamo scegliere quante righe sintetiche da generare utilizzando un rapporto (0, +inf)
+Però in questo modo stiamo aumentando i casi positivi in generale
+
+mantenere il budget di augmentation

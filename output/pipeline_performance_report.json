@@ -1,0 +1,38 @@
+[
+    {
+        "model": "B1_RecordLinkage",
+        "precision": 0.9924,
+        "recall_blocking": 0.9808,
+        "recall_model": 0.9962,
+        "recall_total": 0.977,
+        "f1_total": 0.9847,
+        "inference_time_sec": 0.001151
+    },
+    {
+        "model": "B1_Dedupe",
+        "precision": 0.997,
+        "recall_blocking": 0.9808,
+        "recall_model": 0.997,
+        "recall_total": 0.9779,
+        "f1_total": 0.9874,
+        "inference_time_sec": 4.543424
+    },
+    {
+        "model": "B2_RecordLinkage",
+        "precision": 0.9962,
+        "recall_blocking": 0.7577,
+        "recall_model": 0.9983,
+        "recall_total": 0.7564,
+        "f1_total": 0.8599,
+        "inference_time_sec": 0.001056
+    },
+    {
+        "model": "B2_Dedupe",
+        "precision": 0.9973,
+        "recall_blocking": 0.7577,
+        "recall_model": 0.9983,
+        "recall_total": 0.7564,
+        "f1_total": 0.8603,
+        "inference_time_sec": 7.508259
+    }
+]

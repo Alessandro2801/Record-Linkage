@@ -53,6 +53,8 @@ def load_data(base_path: str):
     
     print(f"Dataset unificato: {df_unificato.shape}")
     print(f"Train: {len(gt_train)}, Val: {len(gt_val)}, Test: {len(gt_test)}")
+
+    
     
     return df_unificato, gt_train, gt_val, gt_test
 
@@ -154,7 +156,7 @@ def evaluate_model(model, X_test, y_test, project_root):
     }
     
     # 4. Definizione del percorso e salvataggio
-    output_path = os.path.join(project_root, "output/models/evaluate_record_linkage.json")
+    output_path = os.path.join(project_root, "output/result_models/evaluate_record_linkage.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     with open(output_path, 'w', encoding='utf-8') as f:

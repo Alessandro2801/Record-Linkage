@@ -1,0 +1,6 @@
+{
+    "best_threshold": 0.3,
+    "precision": 0.9936,
+    "recall": 0.9968,
+    "f1-measure": 0.9952
+}

@@ -101,7 +101,7 @@ if len(test_scores) > 0:
     }
 
     # 2. Definizione del percorso di output e creazione directory
-    output_path = os.path.join(project_root, "output/models/evaluate_dedupe.json")
+    output_path = os.path.join(project_root, "output/result_models/evaluate_dedupe.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # 3. Salvataggio su file JSON
