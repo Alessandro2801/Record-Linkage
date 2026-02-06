@@ -20,6 +20,7 @@ Usage:
 """
 
 import pandas as pd
+from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from src.config import (
@@ -50,6 +51,7 @@ USED_CARS_CRITICAL_COLS  = ["make_name", "model_name", "year", "mileage", "fuel_
 
 def _drop_high_missing(df: pd.DataFrame, threshold: float) -> pd.DataFrame:
     """Rimuove colonne con percentuale di NULL superiore alla soglia."""
+    print("  Analisi valori mancanti...")
     missing_pct = (df.isnull().sum() / len(df)) * 100
     cols_to_drop = missing_pct[missing_pct > threshold].index.tolist()
     if cols_to_drop:
@@ -75,6 +77,7 @@ def process_vehicles() -> None:
     print(f"  Processing: {raw_path.name}")
     print(f"{'─'*60}")
 
+    print("  Lettura CSV...")
     df = pd.read_csv(raw_path, low_memory=False, engine='c')
     print(f"  Shape originale: {df.shape}")
 
@@ -83,6 +86,7 @@ def process_vehicles() -> None:
 
     print(f"  Shape finale:    {df.shape}")
 
+    print("  Scrittura CSV...")
     df.to_csv(VEHICLES_PROCESSED_PATH, index=False)
     print(f"  Salvato → {VEHICLES_PROCESSED_PATH}")
 
@@ -94,6 +98,7 @@ def process_used_cars() -> None:
     print(f"  Processing: {raw_path.name}")
     print(f"{'─'*60}")
 
+    print("  Lettura CSV (file grande, attendere)...")
     df = pd.read_csv(raw_path, low_memory=False, engine='c')
     print(f"  Shape originale: {df.shape}")
 
@@ -113,6 +118,7 @@ def process_used_cars() -> None:
 
     print(f"  Shape finale:    {df.shape}")
 
+    print("  Scrittura CSV...")
     df.to_csv(USED_CARS_PROCESSED_PATH, index=False)
     print(f"  Salvato → {USED_CARS_PROCESSED_PATH}")
 

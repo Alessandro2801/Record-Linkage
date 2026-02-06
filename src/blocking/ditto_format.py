@@ -19,6 +19,7 @@ Usage:
 import argparse
 import pandas as pd
 from pathlib import Path
+from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
 from src.config import (
@@ -53,7 +54,7 @@ def serialize(row, suffix: str) -> str:
 def _serialize_vectorized(df: pd.DataFrame, suffix: str) -> pd.Series:
     """Serializza tutti i record in modo vettorizzato (molto più veloce di iterrows)."""
     parts_list = []
-    for f in MEDIATED_FIELDS:
+    for f in tqdm(MEDIATED_FIELDS, desc=f"    Serializzazione ({suffix})", unit="campo", leave=False):
         col_name = f"{f}_{suffix}"
         if col_name in df.columns:
             vals = df[col_name].astype(str).str.strip()
@@ -85,7 +86,7 @@ def convert_csv_to_ditto(csv_path: Path, txt_path: Path) -> None:
         print(f"  File non trovato: {csv_path}")
         return
 
-    print(f"  {csv_path.name} -> {txt_path.name}")
+    print(f"  {csv_path.name} -> {txt_path.name} ({len(df):,} righe)")
     df = pd.read_csv(csv_path, dtype=str, low_memory=False)
 
     txt_path.parent.mkdir(parents=True, exist_ok=True)

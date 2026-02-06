@@ -19,6 +19,7 @@ import json
 import time
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 import recordlinkage as rl
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -120,27 +121,27 @@ def tune_hyperparameters(X_train, y_train, X_val, y_val):
 
     start_time = time.time()
 
-    for c in c_values:
-        for w in weights:
-            model = LogisticRegression(
-                C=c, class_weight=w, max_iter=1000,
-                random_state=RANDOM_SEED, n_jobs=N_JOBS,
-                solver='lbfgs'
-            )
-            model.fit(X_train, y_train)
+    configs = [(c, w) for c in c_values for w in weights]
+    for c, w in tqdm(configs, desc="Tuning iperparametri", unit="config"):
+        model = LogisticRegression(
+            C=c, class_weight=w, max_iter=1000,
+            random_state=RANDOM_SEED, n_jobs=N_JOBS,
+            solver='lbfgs'
+        )
+        model.fit(X_train, y_train)
 
-            y_val_pred = model.predict(X_val)
+        y_val_pred = model.predict(X_val)
 
-            current_f1 = f1_score(y_val, y_val_pred)
-            current_prec = precision_score(y_val, y_val_pred, zero_division=0)
-            current_rec = recall_score(y_val, y_val_pred, zero_division=0)
+        current_f1 = f1_score(y_val, y_val_pred)
+        current_prec = precision_score(y_val, y_val_pred, zero_division=0)
+        current_rec = recall_score(y_val, y_val_pred, zero_division=0)
 
-            print(f"C: {c:7} | Weight: {str(w):10} | F1: {current_f1:.4f} (P: {current_prec:.2f}, R: {current_rec:.2f})")
+        print(f"C: {c:7} | Weight: {str(w):10} | F1: {current_f1:.4f} (P: {current_prec:.2f}, R: {current_rec:.2f})")
 
-            if current_f1 > best_f1:
-                best_f1 = current_f1
-                best_model = model
-                best_params = {'C': c, 'class_weight': w}
+        if current_f1 > best_f1:
+            best_f1 = current_f1
+            best_model = model
+            best_params = {'C': c, 'class_weight': w}
 
     tuning_duration = time.time() - start_time
 

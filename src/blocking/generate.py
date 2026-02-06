@@ -16,6 +16,7 @@ import jellyfish
 import json
 from collections import defaultdict
 from multiprocessing import Pool
+from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
 from src.config import (
@@ -72,7 +73,7 @@ def stratified_sample(df, n, stratify_cols=['year', 'manufacturer'], random_stat
         quotas[top_groups] += 1
 
     sampled = []
-    for key, group in df.groupby('_strat_key'):
+    for key, group in tqdm(df.groupby('_strat_key'), desc="  Campionamento gruppi", unit="grp", leave=False):
         quota = quotas.get(key, 0)
         if quota > 0:
             sample_size = min(quota, len(group))
@@ -183,21 +184,22 @@ def generate_candidate_pairs(df, strategy, mfr_threshold=0.95, model_threshold=0
         # Usa chunk_size per ridurre overhead IPC
         chunk = max(1, n_buckets // (MP_POOL_SIZE * 4))
         with Pool(MP_POOL_SIZE) as pool:
-            for batch_pairs in pool.imap_unordered(_process_bucket, bucket_args, chunksize=chunk):
+            for batch_pairs in tqdm(
+                pool.imap_unordered(_process_bucket, bucket_args, chunksize=chunk),
+                total=n_buckets, desc="  Blocking", unit="bucket"
+            ):
                 for id_a, id_b, idx_i, idx_j in batch_pairs:
                     pair_key = (id_a, id_b)
                     if pair_key not in seen:
                         seen.add(pair_key)
                         candidate_pairs.append((idx_i, idx_j))
     else:
-        for b_idx, args in enumerate(bucket_args):
+        for args in tqdm(bucket_args, desc="  Blocking", unit="bucket"):
             for id_a, id_b, idx_i, idx_j in _process_bucket(args):
                 pair_key = (id_a, id_b)
                 if pair_key not in seen:
                     seen.add(pair_key)
                     candidate_pairs.append((idx_i, idx_j))
-            if b_idx % 500 == 0 and b_idx > 0:
-                print(f"    Progresso: {b_idx}/{n_buckets} bucket ({len(candidate_pairs)} coppie)")
 
     print(f"  Totale coppie candidate: {len(candidate_pairs)}")
 

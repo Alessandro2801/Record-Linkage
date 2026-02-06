@@ -15,6 +15,7 @@ import numpy as np
 import re
 from multiprocessing import Pool
 from functools import partial
+from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
 from src.config import (
@@ -74,14 +75,17 @@ def validate_vins_parallel(vin_series, n_workers=None):
 
     if n < 10_000 or n_workers <= 1:
         # Non conviene parallelizzare per pochi record
-        return [is_valid_vin_checksum(v) for v in vins]
+        return [is_valid_vin_checksum(v) for v in tqdm(vins, desc="  Validazione VIN", unit="vin")]
 
     chunk_size = max(1, n // n_workers)
     chunks = [vins[i:i + chunk_size] for i in range(0, n, chunk_size)]
 
     print(f"  Validazione VIN: {n:,} record su {n_workers} workers...")
     with Pool(n_workers) as pool:
-        results = pool.map(_validate_vin_batch, chunks)
+        results = list(tqdm(
+            pool.imap(_validate_vin_batch, chunks),
+            total=len(chunks), desc="  Validazione VIN (parallela)", unit="batch"
+        ))
 
     return [v for batch in results for v in batch]
 
@@ -139,7 +143,7 @@ def deduplica_vin_per_similarita(df, vin_col='vin', date_col='pubblication_date'
     # Prepara argomenti per multiprocessing
     groups = []
     single_records = []
-    for vin, gruppo in df.groupby(vin_col):
+    for vin, gruppo in tqdm(df.groupby(vin_col), desc="  Raggruppamento VIN", unit="vin"):
         if len(gruppo) == 1:
             single_records.append(gruppo.iloc[0].to_dict())
         else:
@@ -154,11 +158,14 @@ def deduplica_vin_per_similarita(df, vin_col='vin', date_col='pubblication_date'
         n_workers = min(MP_POOL_SIZE, len(groups))
         if n_workers > 1 and len(groups) > 100:
             with Pool(n_workers) as pool:
-                results = pool.map(_dedup_group, groups)
+                results = list(tqdm(
+                    pool.imap(_dedup_group, groups, chunksize=max(1, len(groups) // (n_workers * 4))),
+                    total=len(groups), desc="  Dedup VIN (parallela)", unit="gruppo"
+                ))
             for batch in results:
                 record_finali.extend(batch)
         else:
-            for g in groups:
+            for g in tqdm(groups, desc="  Dedup VIN", unit="gruppo"):
                 record_finali.extend(_dedup_group(g))
 
     df_res = pd.DataFrame(record_finali).reset_index(drop=True)
@@ -216,7 +223,7 @@ def genera_negativi_stratificati(df, n_target, positivi_ids, random_state=42):
 
     def sample_pairs_from_groups(grouped, quota, label_name):
         pairs = []
-        for _, group in grouped:
+        for _, group in tqdm(grouped, desc=f"  {label_name}", unit="gruppo", leave=False):
             if len(group) < 2:
                 continue
             ids = group['id_univoco'].values

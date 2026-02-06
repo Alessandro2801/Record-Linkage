@@ -17,6 +17,7 @@ import numpy as np
 import dedupe
 import json
 import pandas as pd
+from tqdm import tqdm
 from sklearn.metrics import f1_score, precision_score, recall_score
 
 from src.config import (
@@ -33,7 +34,7 @@ def get_pair_scores(linker, gt_df, data_dict):
     pairs = []
     labels = []
 
-    for _, row in gt_df.iterrows():
+    for _, row in tqdm(gt_df.iterrows(), total=len(gt_df), desc="  Scoring coppie", unit="coppia"):
         id_a, id_b = str(row['id_A']), str(row['id_B'])
 
         if id_a in data_dict and id_b in data_dict:
@@ -90,7 +91,7 @@ def main(strategy: str = None):
     best_f1 = 0
 
     if len(val_scores) > 0:
-        for threshold in np.arange(0.1, 1.0, 0.05):
+        for threshold in tqdm(np.arange(0.1, 1.0, 0.05), desc="  Ottimizzazione soglia", unit="th"):
             predictions = (val_scores > threshold).astype(int)
             f1 = f1_score(val_labels, predictions)
             if f1 > best_f1:

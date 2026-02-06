@@ -12,6 +12,7 @@ Usage:
 import pandas as pd
 import numpy as np
 import re
+from tqdm import tqdm
 
 from src.config import (
     VEHICLES_PROCESSED_PATH,
@@ -82,7 +83,7 @@ def normalizzazione_universale(df):
     ]
 
     # Pulizia vettorizzata con pandas str methods (molto più veloce di apply)
-    for col in colonne_testo:
+    for col in tqdm(colonne_testo, desc="  Normalizzazione colonne testo", unit="col"):
         if col in df_norm.columns:
             s = df_norm[col].astype(str).str.lower().str.strip()
             # Marca i valori nulli/assenti
@@ -98,6 +99,7 @@ def normalizzazione_universale(df):
 
     # Pulizia description (vettorizzata)
     if 'description' in df_norm.columns:
+        print("  Normalizzazione colonna description...")
         desc = df_norm['description'].astype(str).str.lower()
         null_mask = desc.isin(['nan', 'none', '', '<na>']) | df_norm['description'].isna()
         desc = desc.str.replace(r'http\S+|www\S+|https\S+', '', regex=True)
@@ -109,7 +111,7 @@ def normalizzazione_universale(df):
 
     # Normalizzazione numerica
     colonne_numeriche = ['year', 'price', 'mileage']
-    for col in colonne_numeriche:
+    for col in tqdm(colonne_numeriche, desc="  Normalizzazione colonne numeriche", unit="col"):
         if col in df_norm.columns:
             df_norm[col] = pd.to_numeric(df_norm[col], errors='coerce')
 

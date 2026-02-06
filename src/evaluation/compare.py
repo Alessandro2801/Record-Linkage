@@ -19,6 +19,7 @@ import numpy as np
 import dedupe
 import torch
 from sklearn.metrics import precision_score, recall_score, f1_score
+from tqdm import tqdm
 
 from src.config import (
     BLOCKING_STATS_DIR,
@@ -149,7 +150,7 @@ def run_inference_dedupe(linker, df_pairs, model_name, df_unificato, blocking_re
     data_dict = create_dedupe_dict(df_prepared, relevant_ids)
 
     pairs, y_true = [], []
-    for _, row in df_pairs.iterrows():
+    for _, row in tqdm(df_pairs.iterrows(), total=len(df_pairs), desc="Dedupe pairs"):
         id_a, id_b = str(row['id_A']), str(row['id_B'])
         if id_a in data_dict and id_b in data_dict:
             pairs.append(((id_a, data_dict[id_a]), (id_b, data_dict[id_b])))
@@ -207,7 +208,7 @@ def run_inference_ditto(model, txt_path, model_name, blocking_recall, device):
     start_time = time.time()
     model.eval()
     with torch.no_grad():
-        for batch in loader:
+        for batch in tqdm(loader, desc="Ditto inference"):
             if len(batch) == 2:
                 x, y = batch
                 x = x.to(device)
@@ -225,7 +226,7 @@ def run_inference_ditto(model, txt_path, model_name, blocking_recall, device):
 
     # Threshold ottimale
     best_th, best_f1 = 0.5, 0.0
-    for th in np.arange(0.0, 1.0, 0.05):
+    for th in tqdm(np.arange(0.0, 1.0, 0.05), desc="Ditto threshold opt"):
         pred = [1 if p > th else 0 for p in all_probs]
         f1 = f1_score(y_true, pred, zero_division=0)
         if f1 > best_f1:

@@ -18,6 +18,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 from src.config import (
     MEDIATED_SCHEMA_NORMALIZED_PATH,
@@ -118,7 +119,7 @@ def create_dedupe_dict(df: pd.DataFrame, ids: set) -> dict:
     df_subset = df.loc[df.index.isin(ids)]
 
     records = {}
-    for idx, row in df_subset.iterrows():
+    for idx, row in tqdm(df_subset.iterrows(), total=len(df_subset), desc="  Creazione dizionario", unit="rec"):
         record = {}
         for col in ALL_COLS:
             if col in df_subset.columns:
@@ -183,7 +184,7 @@ def prepare_training_pairs(gt_df: pd.DataFrame, data_dict: dict) -> tuple:
     distinct = []
     skipped = 0
 
-    for _, row in gt_df.iterrows():
+    for _, row in tqdm(gt_df.iterrows(), total=len(gt_df), desc="  Preparazione coppie", unit="coppia"):
         id_a = str(row['id_A'])
         id_b = str(row['id_B'])
 
