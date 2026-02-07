@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import warnings
 from typing import Dict, Iterable, List, Tuple
 
@@ -15,7 +14,6 @@ import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import f1_score, precision_score, recall_score
-from tqdm import tqdm
 
 from src.config import (
     MEDIATED_SCHEMA_NORMALIZED_PATH,
@@ -56,8 +54,10 @@ ALL_COLS = COLS_STRING + COLS_NUMERIC + COLS_CATEGORICAL
 
 
 def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    required_cols = set(["id_source_vehicles", "id_source_used_cars"] + ALL_COLS)
     df_unified = pd.read_csv(
         MEDIATED_SCHEMA_NORMALIZED_PATH,
+        usecols=lambda c: c in required_cols,
         dtype={"id_source_vehicles": "object", "id_source_used_cars": "object"},
         low_memory=False,
     )
@@ -77,6 +77,11 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]
         frame["id_B"] = frame["id_B"].astype(str)
 
     return df_unified, gt_train, gt_val, gt_test
+
+
+def _build_unified_id_series(df: pd.DataFrame) -> pd.Series:
+    """Costruisce la chiave ID unificata in formato stringa."""
+    return df["id_source_vehicles"].fillna(df["id_source_used_cars"]).astype(str).str.strip()
 
 
 def to_clean_string(val):
@@ -306,8 +311,6 @@ def train_model(sample_size: int = 5000):
     print_hw_info()
 
     df_unified, gt_train, gt_val, gt_test = load_data()
-    df_prepared = prepare_data_for_dedupe(df_unified)
-    df_prepared.index = df_prepared.index.astype(str)
 
     ids_train_val = (
         set(gt_train["id_A"].astype(str))
@@ -315,16 +318,33 @@ def train_model(sample_size: int = 5000):
         | set(gt_val["id_A"].astype(str))
         | set(gt_val["id_B"].astype(str))
     )
+    ids_test = set(gt_test["id_A"].astype(str)) | set(gt_test["id_B"].astype(str))
 
-    remaining_ids = [idx for idx in df_prepared.index if idx not in ids_train_val]
-    if remaining_ids:
+    id_series = _build_unified_id_series(df_unified)
+    all_unique_ids = id_series.unique()
+    ids_train_val_arr = np.array(list(ids_train_val), dtype=object)
+
+    if len(all_unique_ids) > 0:
+        remaining_mask = ~np.isin(all_unique_ids, ids_train_val_arr)
+        remaining_ids = all_unique_ids[remaining_mask]
+    else:
+        remaining_ids = np.array([], dtype=object)
+
+    if len(remaining_ids) > 0:
         rng = np.random.RandomState(RANDOM_SEED)
         extra_size = min(sample_size, len(remaining_ids))
-        extra_ids = set(rng.choice(remaining_ids, size=extra_size, replace=False).tolist())
+        extra_ids = set(rng.choice(remaining_ids, size=extra_size, replace=False).astype(str).tolist())
     else:
         extra_ids = set()
 
     ids_for_training = ids_train_val | extra_ids
+    ids_for_preparation = ids_for_training | ids_test
+
+    # Riduce drasticamente RAM/tempo: prepara solo i record realmente necessari.
+    df_subset = df_unified.loc[id_series.isin(ids_for_preparation)].copy()
+    df_prepared = prepare_data_for_dedupe(df_subset)
+    df_prepared.index = df_prepared.index.astype(str)
+
     data_dict = create_dedupe_dict(df_prepared, ids_for_training)
 
     matches, distinct = prepare_training_pairs(gt_train, data_dict)
@@ -378,7 +398,10 @@ def evaluate_saved_model_on_gt_test() -> Dict[str, float]:
     threshold = float(meta.get("best_threshold", 0.5))
 
     df_unified, _, _, gt_test = load_data()
-    df_prepared = prepare_data_for_dedupe(df_unified)
+    ids_test = set(gt_test["id_A"].astype(str)) | set(gt_test["id_B"].astype(str))
+    id_series = _build_unified_id_series(df_unified)
+    df_subset = df_unified.loc[id_series.isin(ids_test)].copy()
+    df_prepared = prepare_data_for_dedupe(df_subset)
     df_prepared.index = df_prepared.index.astype(str)
 
     pred, _ = infer_pairs(linker, gt_test, df_prepared, threshold=threshold)

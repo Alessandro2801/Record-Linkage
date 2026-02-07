@@ -9,7 +9,6 @@ import argparse
 import json
 import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Dict, Iterable, Tuple
 
@@ -21,6 +20,15 @@ from src.blocking.ditto_format import dataframe_to_ditto_lines
 from src.config import (
     DITTO_BATCH_SIZE,
     DITTO_CHECKPOINTS_DIR,
+    DITTO_FP16,
+    DITTO_LM,
+    DITTO_LR,
+    DITTO_MAX_LEN,
+    DITTO_N_EPOCHS,
+    DITTO_SCRIPT,
+    DITTO_TASK,
+    DITTO_TRAIN_BATCH_SIZE,
+    DITTO_VENDOR_DATA_DIR,
     DITTO_VENDOR_DIR,
     RANDOM_SEED,
     ensure_dirs,
@@ -30,8 +38,7 @@ from src.config import (
 )
 
 THRESHOLDS = np.arange(0.10, 1.00, 0.05)
-DEFAULT_TASK = "automotive_task"
-DEFAULT_CHECKPOINT = DITTO_CHECKPOINTS_DIR / DEFAULT_TASK / "model.pt"
+DEFAULT_CHECKPOINT = DITTO_CHECKPOINTS_DIR / DITTO_TASK / "model.pt"
 
 
 def _import_ditto_runtime():
@@ -84,42 +91,44 @@ def prepare_ditto_training_files() -> None:
 
 
 def run_ditto_training(
-    lm: str = "roberta",
-    max_len: int = 256,
-    lr: float = 3e-5,
-    n_epochs: int = 20,
-    batch_size: int = 64,
+    lm: str = DITTO_LM,
+    max_len: int = DITTO_MAX_LEN,
+    lr: float = DITTO_LR,
+    n_epochs: int = DITTO_N_EPOCHS,
+    batch_size: int = DITTO_TRAIN_BATCH_SIZE,
     device: str = "auto",
-    task: str = DEFAULT_TASK,
+    task: str = DITTO_TASK,
+    fp16: bool = DITTO_FP16,
 ) -> None:
+    """Esegue il training Ditto invocando train_ditto.sh via subprocess
+    con cwd impostata a DITTO_VENDOR_DIR, così che i path relativi
+    (configs.json, data/, checkpoints/) funzionino correttamente."""
     selected_device = _select_device(device)
 
+    # Verifica che i file di training esistano
+    for name in ("train.txt", "val.txt", "test.txt"):
+        p = DITTO_VENDOR_DATA_DIR / name
+        if not p.exists():
+            raise FileNotFoundError(f"File Ditto non trovato: {p}")
+
     cmd = [
-        sys.executable,
-        "train_ditto.py",
-        "--task",
-        task,
-        "--batch_size",
-        str(batch_size),
-        "--max_len",
-        str(max_len),
-        "--lr",
-        str(lr),
-        "--n_epochs",
-        str(n_epochs),
-        "--lm",
-        lm,
-        "--save_model",
-        "--device",
-        selected_device,
-        "--run_id",
-        str(RANDOM_SEED),
+        "bash", str(DITTO_SCRIPT),
+        task,                       # $1 TASK
+        str(batch_size),            # $2 BATCH_SIZE
+        str(max_len),               # $3 MAX_LEN
+        str(lr),                    # $4 LR
+        str(n_epochs),              # $5 N_EPOCHS
+        lm,                         # $6 LM
+        "1" if fp16 else "0",       # $7 FP16
+        selected_device,            # $8 DEVICE
+        str(DITTO_CHECKPOINTS_DIR) + "/",  # $9 LOGDIR (path assoluto)
+        str(RANDOM_SEED),           # $10 RUN_ID
     ]
 
     print(f"Esecuzione training Ditto: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=str(DITTO_VENDOR_DIR), check=False)
     if result.returncode != 0:
-        raise RuntimeError("Training Ditto fallito")
+        raise RuntimeError(f"Training Ditto fallito (exit code {result.returncode})")
 
 
 def load_model_and_meta(
@@ -241,13 +250,13 @@ def save_meta(
 
 
 def train_model(
-    lm: str = "roberta",
-    max_len: int = 256,
-    lr: float = 3e-5,
-    n_epochs: int = 20,
-    batch_size: int = 64,
+    lm: str = DITTO_LM,
+    max_len: int = DITTO_MAX_LEN,
+    lr: float = DITTO_LR,
+    n_epochs: int = DITTO_N_EPOCHS,
+    batch_size: int = DITTO_TRAIN_BATCH_SIZE,
     device: str = "auto",
-    task: str = DEFAULT_TASK,
+    task: str = DITTO_TASK,
 ) -> None:
     ensure_dirs()
     print_hw_info()
@@ -265,7 +274,7 @@ def train_model(
     )
 
     gt_train, gt_val, gt_test = load_gt_splits()
-    del gt_train  # usato solo nel training subprocess
+    del gt_train  # usato solo nel training diretto
 
     checkpoint_path = DITTO_CHECKPOINTS_DIR / task / "model.pt"
     selected_device = _select_device(device)
@@ -327,12 +336,12 @@ def main():
     parser = argparse.ArgumentParser(description="Training/eval Ditto")
     parser.add_argument("--train", action="store_true", help="Esegue training + tuning")
     parser.add_argument("--evaluate", action="store_true", help="Valuta checkpoint salvato")
-    parser.add_argument("--task", type=str, default=DEFAULT_TASK)
-    parser.add_argument("--lm", type=str, default="roberta")
-    parser.add_argument("--max-len", type=int, default=256)
-    parser.add_argument("--lr", type=float, default=3e-5)
-    parser.add_argument("--n-epochs", type=int, default=20)
-    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--task", type=str, default=DITTO_TASK)
+    parser.add_argument("--lm", type=str, default=DITTO_LM)
+    parser.add_argument("--max-len", type=int, default=DITTO_MAX_LEN)
+    parser.add_argument("--lr", type=float, default=DITTO_LR)
+    parser.add_argument("--n-epochs", type=int, default=DITTO_N_EPOCHS)
+    parser.add_argument("--batch-size", type=int, default=DITTO_TRAIN_BATCH_SIZE)
     parser.add_argument("--device", type=str, choices=["auto", "cpu", "cuda"], default="auto")
     args = parser.parse_args()
 

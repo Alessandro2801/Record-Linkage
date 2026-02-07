@@ -116,7 +116,10 @@ def _run_dedupe_inference(candidates_df: pd.DataFrame):
     threshold = float(meta.get("best_threshold", 0.5))
 
     df_unified, _, _, _ = dedupe_module.load_data()
-    df_prepared = dedupe_module.prepare_data_for_dedupe(df_unified)
+    relevant_ids = set(candidates_df["id_A"].astype(str)) | set(candidates_df["id_B"].astype(str))
+    id_series = df_unified["id_source_vehicles"].fillna(df_unified["id_source_used_cars"]).astype(str).str.strip()
+    df_subset = df_unified.loc[id_series.isin(relevant_ids)].copy()
+    df_prepared = dedupe_module.prepare_data_for_dedupe(df_subset)
     df_prepared.index = df_prepared.index.astype(str)
 
     t0 = time.time()

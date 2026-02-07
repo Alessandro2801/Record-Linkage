@@ -1,9 +1,0 @@
-{
-    "strategy": "B1",
-    "mfr_threshold": 0.95,
-    "model_threshold": null,
-    "positives_in_gt": 2398,
-    "total_pairs_selected": 2435,
-    "positives_captured": 2352,
-    "recall_percentage": 98.08
-}

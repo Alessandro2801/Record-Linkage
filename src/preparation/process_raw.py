@@ -27,7 +27,6 @@ from src.config import (
     PROCESSED_DIR,
     VEHICLES_PROCESSED_PATH,
     USED_CARS_PROCESSED_PATH,
-    N_JOBS,
     print_hw_info,
     ensure_dirs,
 )

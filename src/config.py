@@ -64,6 +64,16 @@ BLOCKING_SAMPLE_SIZE = 50_000
 BLOCKING_MFR_THRESHOLD = 0.95
 BLOCKING_MODEL_THRESHOLD = 0.85
 
+# ── Ditto — iperparametri di training ─────────────────────────────────────────
+DITTO_TASK = "automotive_task"
+DITTO_LM = "roberta"
+DITTO_MAX_LEN = 256
+DITTO_LR = 3e-5
+DITTO_N_EPOCHS = 7
+DITTO_FP16 = True
+DITTO_TRAIN_BATCH_SIZE = 32
+DITTO_SCRIPT = DITTO_VENDOR_DIR / "train_ditto.sh"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  KAGGLE
 # ═══════════════════════════════════════════════════════════════════════════════
