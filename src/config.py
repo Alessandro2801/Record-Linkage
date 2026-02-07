@@ -50,7 +50,10 @@ VEHICLES_PROCESSED_PATH         = PROCESSED_DIR / "vehicles_processed.csv"
 USED_CARS_PROCESSED_PATH        = PROCESSED_DIR / "used_cars_data_processed.csv"
 MEDIATED_SCHEMA_NORMALIZED_PATH = MEDIATED_SCHEMA_DIR / "mediated_schema_normalized.csv"
 GROUND_TRUTH_PATH               = GROUND_TRUTH_DIR / "ground_truth.csv"
-GT_EVAL_PATH                    = GROUND_TRUTH_DIR / "eval.csv"
+CLEANED_DATASET_PATH            = GROUND_TRUTH_DIR / "cleaned_dataset.csv"
+GT_TRAIN_PATH                   = GT_SPLITS_DIR / "train.csv"
+GT_VAL_PATH                     = GT_SPLITS_DIR / "val.csv"
+GT_TEST_PATH                    = GT_SPLITS_DIR / "test.csv"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PARAMETRI SPERIMENTALI

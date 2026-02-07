@@ -11,7 +11,6 @@ Usage:
 """
 
 import pandas as pd
-import numpy as np
 import jellyfish
 import json
 from collections import defaultdict
@@ -20,11 +19,10 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
 from src.config import (
-    MEDIATED_SCHEMA_NORMALIZED_PATH,
+    CLEANED_DATASET_PATH,
     GROUND_TRUTH_PATH,
     BLOCKING_DIR,
     BLOCKING_STATS_DIR,
-    BLOCKING_SAMPLE_SIZE,
     BLOCKING_MFR_THRESHOLD,
     BLOCKING_MODEL_THRESHOLD,
     RANDOM_SEED,
@@ -34,61 +32,6 @@ from src.config import (
     blocking_split_path,
     ensure_dirs,
 )
-
-
-def load_mediated_schema(path):
-    """Carica il CSV mediato, crea id_univoco, separa le due sorgenti."""
-    print(f"Caricamento mediated schema da {path}...")
-    df = pd.read_csv(path, dtype={'id_source_vehicles': 'object'}, low_memory=False)
-    df['id_univoco'] = df['id_source_vehicles'].fillna(df['id_source_used_cars']).astype(str)
-    return df
-
-
-def stratified_sample(df, n, stratify_cols=['year', 'manufacturer'], random_state=42):
-    """
-    Campiona N record stratificati per anno e manufacturer.
-    Usa groupby + campionamento proporzionale per gruppo.
-    """
-    if len(df) <= n:
-        return df.copy()
-
-    rng = np.random.RandomState(random_state)
-
-    df = df.copy()
-    df['_strat_key'] = (
-        df[stratify_cols[0]].fillna(0).astype(int).astype(str) + '_' +
-        df[stratify_cols[1]].fillna('unknown').astype(str).str.lower().str.strip()
-    )
-
-    # Calcola quota proporzionale per gruppo
-    group_sizes = df.groupby('_strat_key').size()
-    proportions = group_sizes / len(df)
-    quotas = (proportions * n).apply(np.floor).astype(int)
-
-    # Distribuisci il residuo ai gruppi più grandi
-    deficit = n - quotas.sum()
-    if deficit > 0:
-        remainder = (proportions * n) - quotas
-        top_groups = remainder.nlargest(deficit).index
-        quotas[top_groups] += 1
-
-    sampled = []
-    for key, group in tqdm(df.groupby('_strat_key'), desc="  Campionamento gruppi", unit="grp", leave=False):
-        quota = quotas.get(key, 0)
-        if quota > 0:
-            sample_size = min(quota, len(group))
-            sampled.append(group.sample(n=sample_size, random_state=rng))
-
-    result = pd.concat(sampled, ignore_index=True).drop(columns=['_strat_key'])
-
-    # Se ancora sotto quota (per arrotondamenti), aggiungi random
-    if len(result) < n:
-        remaining_idx = df.index.difference(result.index)
-        extra = df.loc[remaining_idx].sample(n=n - len(result), random_state=rng)
-        result = pd.concat([result, extra.drop(columns=['_strat_key'])], ignore_index=True)
-
-    print(f"  Campionamento stratificato: {len(df)} -> {len(result)} record")
-    return result
 
 
 def build_inverted_index(df, year_col='year', mfr_col='manufacturer'):
@@ -167,13 +110,23 @@ def generate_candidate_pairs(df, strategy, mfr_threshold=0.95, model_threshold=0
     fuels = df_work['_fuel'].values
     ids = df_work['id_univoco'].values
 
-    n_buckets = len(inv_index)
+    # Sub-partizionamento di TUTTI i bucket per model_prefix_3
+    final_buckets = []
+    for bucket in inv_index.values():
+        sub = defaultdict(list)
+        for idx in bucket:
+            model_prefix = models[idx][:3] if models[idx] else ''
+            sub[model_prefix].append(idx)
+        final_buckets.extend(sub.values())
+
+    n_buckets = len(final_buckets)
+    print(f"  Blocking key: (year, mfr[:3], model[:3]) -> {n_buckets:,} bucket")
     print(f"  Generazione coppie con strategia {strategy} ({n_buckets:,} bucket, {MP_POOL_SIZE} workers)...")
 
     # Prepara argomenti per multiprocessing
     bucket_args = [
         (bucket, mfrs, models, fuels, ids, strategy, mfr_threshold, model_threshold)
-        for bucket in inv_index.values()
+        for bucket in final_buckets
     ]
 
     # Processa bucket in parallelo
@@ -278,22 +231,16 @@ def main():
     ensure_dirs()
     print_hw_info()
 
-    # 1. Carica dataset mediato
-    df = load_mediated_schema(str(MEDIATED_SCHEMA_NORMALIZED_PATH))
-
-    # 2. Separa sorgenti per campionamento bilanciato
-    df_vehicles = df[df['id_source_vehicles'].notna()].copy()
-    df_usedcars = df[df['id_source_used_cars'].notna()].copy()
-    print(f"Vehicles (Craigslist): {len(df_vehicles)} record")
-    print(f"UsedCars: {len(df_usedcars)} record")
-
-    # 3. Campiona stratificato per sorgente, poi combina
-    print(f"\nCampionamento stratificato di {BLOCKING_SAMPLE_SIZE} record per sorgente...")
-    df_veh_sample = stratified_sample(df_vehicles, BLOCKING_SAMPLE_SIZE, random_state=RANDOM_SEED)
-    df_uc_sample = stratified_sample(df_usedcars, BLOCKING_SAMPLE_SIZE, random_state=RANDOM_SEED)
-
-    df_combined = pd.concat([df_veh_sample, df_uc_sample], ignore_index=True)
-    print(f"Dataset combinato: {len(df_combined)} record")
+    # 1. Carica dataset campionato (generato da ground_truth.py)
+    print(f"Caricamento dataset campionato da {CLEANED_DATASET_PATH}...")
+    if not CLEANED_DATASET_PATH.exists():
+        raise FileNotFoundError(
+            f"Dataset campionato non trovato: {CLEANED_DATASET_PATH}\n"
+            "Eseguire prima: python -m src.preparation.ground_truth"
+        )
+    df_combined = pd.read_csv(CLEANED_DATASET_PATH, dtype={'id_source_vehicles': 'object'}, low_memory=False)
+    df_combined['id_univoco'] = df_combined['id_source_vehicles'].fillna(df_combined['id_source_used_cars']).astype(str)
+    print(f"Dataset campionato: {len(df_combined)} record")
 
     # 4. Carica GT per labeling
     gt = pd.read_csv(GROUND_TRUTH_PATH)
@@ -333,7 +280,7 @@ def main():
         # 8. Valuta blocking (sul file completo)
         stats = evaluate_blocking(candidates, gt, len(df_combined))
         stats['strategy'] = strategy
-        stats['sample_size_per_source'] = BLOCKING_SAMPLE_SIZE
+        stats['sample_size'] = len(df_combined)
         stats['mfr_threshold'] = BLOCKING_MFR_THRESHOLD
         stats['model_threshold'] = BLOCKING_MODEL_THRESHOLD if strategy == 'B2' else None
 
@@ -344,19 +291,25 @@ def main():
         test_path = blocking_split_path(strategy, 'test')
         json_path = BLOCKING_STATS_DIR / f'stats_{strategy}.json'
 
+        print(f"\n  Salvataggio CSV completo ({len(candidates):,} righe)...", flush=True)
         candidates.to_csv(csv_path, index=False)
+        print(f"  -> {csv_path}")
+
+        print(f"  Salvataggio train ({len(train_df):,} righe)...", flush=True)
         train_df.to_csv(train_path, index=False)
+        print(f"  -> {train_path}")
+
+        print(f"  Salvataggio val ({len(val_df):,} righe)...", flush=True)
         val_df.to_csv(val_path, index=False)
+        print(f"  -> {val_path}")
+
+        print(f"  Salvataggio test ({len(test_df):,} righe)...", flush=True)
         test_df.to_csv(test_path, index=False)
+        print(f"  -> {test_path}")
 
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(stats, f, indent=4)
-
-        print(f"\n  Salvato CSV completo: {csv_path}")
-        print(f"  Salvato train: {train_path}")
-        print(f"  Salvato val:   {val_path}")
-        print(f"  Salvato test:  {test_path}")
-        print(f"  Salvato stats: {json_path}")
+        print(f"  -> {json_path}")
 
 
 if __name__ == "__main__":

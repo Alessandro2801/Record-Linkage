@@ -82,32 +82,47 @@ def normalizzazione_universale(df):
         'transmission', 'traction', 'body_type', 'main_color', 'cylinders'
     ]
 
-    # Pulizia vettorizzata con pandas str methods (molto più veloce di apply)
+    # Pulizia colonne testo (singolo passaggio per colonna, regex pre-compilate)
+    _RE_NON_ALNUM = re.compile(r'[^a-z0-9\s]')
+    _RE_SPACES = re.compile(r'\s+')
+    _NULL_VALS = frozenset(['nan', 'none', '', '<na>'])
+
+    def _clean_text(val):
+        if pd.isna(val):
+            return np.nan
+        s = str(val).lower().strip()
+        if s in _NULL_VALS:
+            return np.nan
+        s = _RE_NON_ALNUM.sub('', s)
+        s = _RE_SPACES.sub(' ', s).strip()
+        return s if s else np.nan
+
     for col in tqdm(colonne_testo, desc="  Normalizzazione colonne testo", unit="col"):
         if col in df_norm.columns:
-            s = df_norm[col].astype(str).str.lower().str.strip()
-            # Marca i valori nulli/assenti
-            null_mask = s.isin(['nan', 'none', '', '<na>']) | df_norm[col].isna()
-            # Rimuovi caratteri non alfanumerici (tranne spazi)
-            s = s.str.replace(r'[^a-z0-9\s]', '', regex=True)
-            # Collassa spazi multipli
-            s = s.str.replace(r'\s+', ' ', regex=True).str.strip()
-            # Stringhe vuote dopo pulizia -> NaN
-            s = s.where(s != '', other=np.nan)
-            s = s.where(~null_mask, other=np.nan)
-            df_norm[col] = s
+            df_norm[col] = df_norm[col].map(_clean_text, na_action='ignore')
 
-    # Pulizia description (vettorizzata)
+    # Pulizia description (ottimizzata: singolo passaggio con regex compilate)
     if 'description' in df_norm.columns:
         print("  Normalizzazione colonna description...")
-        desc = df_norm['description'].astype(str).str.lower()
-        null_mask = desc.isin(['nan', 'none', '', '<na>']) | df_norm['description'].isna()
-        desc = desc.str.replace(r'http\S+|www\S+|https\S+', '', regex=True)
-        desc = desc.str.replace(r'[^a-z0-9\s]', ' ', regex=True)
-        desc = desc.str.replace(r'\s+', ' ', regex=True).str.strip()
-        desc = desc.where(desc != '', other=np.nan)
-        desc = desc.where(~null_mask, other=np.nan)
-        df_norm['description'] = desc
+        _RE_URL = re.compile(r'http\S+|www\S+|https\S+')
+        _RE_NON_ALNUM = re.compile(r'[^a-z0-9\s]')
+        _RE_SPACES = re.compile(r'\s+')
+        _NULL_VALS = frozenset(['nan', 'none', '', '<na>'])
+
+        raw = df_norm['description']
+
+        def _clean_desc(val):
+            if pd.isna(val):
+                return np.nan
+            s = str(val).lower()
+            if s in _NULL_VALS:
+                return np.nan
+            s = _RE_URL.sub('', s)
+            s = _RE_NON_ALNUM.sub(' ', s)
+            s = _RE_SPACES.sub(' ', s).strip()
+            return s if s else np.nan
+
+        df_norm['description'] = raw.map(_clean_desc, na_action='ignore')
 
     # Normalizzazione numerica
     colonne_numeriche = ['year', 'price', 'mileage']

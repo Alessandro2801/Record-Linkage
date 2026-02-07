@@ -21,8 +21,11 @@ from sklearn.model_selection import train_test_split
 from src.config import (
     MEDIATED_SCHEMA_NORMALIZED_PATH,
     GROUND_TRUTH_DIR,
+    CLEANED_DATASET_PATH,
     GT_SPLITS_DIR,
-    GT_EVAL_PATH,
+    GT_TRAIN_PATH,
+    GT_VAL_PATH,
+    GT_TEST_PATH,
     GT_NEGATIVE_RATIO,
     RANDOM_SEED,
     VIN_MAX_DIFF,
@@ -208,9 +211,8 @@ def pulizia_vin_avanzata(df, colonna_vin='vin', colonna_data='pubblication_date'
 def genera_negativi_stratificati(df, n_target, positivi_ids, random_state=42):
     """
     Genera negativi stratificati in 2 fasce di difficoltà coerenti con il blocking:
-    - HARD (60%): stesso manufacturer + year + body_type
-    - MEDIUM (40%): stesso manufacturer + year
-    Fallback a random puro se non si raggiunge la quota.
+    - HARD (70%): stesso manufacturer + year + body_type
+    - MEDIUM (30%): stesso manufacturer + year
     """
     rng = np.random.RandomState(random_state)
 
@@ -256,33 +258,24 @@ def genera_negativi_stratificati(df, n_target, positivi_ids, random_state=42):
         print(f"  {label_name}: richiesti {quota}, disponibili {len(pairs)}")
         return pairs
 
-    # HARD (60%)
-    quota_hard = int(n_target * 0.6)
+    # HARD (70%)
+    quota_hard = int(n_target * 0.70)
     grouped_hard = df_neg.groupby(['_mfr', '_year', '_body'])
     hard_pairs = sample_pairs_from_groups(grouped_hard, quota_hard, "HARD")
     seen_pairs.update(hard_pairs)
 
-    # MEDIUM (40% + deficit)
-    quota_medium = n_target - len(hard_pairs)
+    # MEDIUM (30%)
+    quota_medium = int(n_target * 0.30)
     grouped_medium = df_neg.groupby(['_mfr', '_year'])
     medium_pairs = sample_pairs_from_groups(grouped_medium, quota_medium, "MEDIUM")
     seen_pairs.update(medium_pairs)
 
-    # FALLBACK
     all_pairs = hard_pairs + medium_pairs
-    if len(all_pairs) < n_target:
-        remaining = n_target - len(all_pairs)
-        print(f"  FALLBACK random (stesso anno): generando {remaining} coppie aggiuntive...")
-        grouped_year = df_neg.groupby(['_year'])
-        fallback = sample_pairs_from_groups(grouped_year, remaining, "FALLBACK")
-        seen_pairs.update(fallback)
-        all_pairs.extend(fallback)
 
     total = len(all_pairs)
     n_h, n_m = len(hard_pairs), len(medium_pairs)
-    n_f = total - n_h - n_m
     print(f"\n  Distribuzione negativi: HARD={n_h} ({n_h/total*100:.1f}%), "
-          f"MEDIUM={n_m} ({n_m/total*100:.1f}%), FALLBACK={n_f} ({n_f/total*100:.1f}%)")
+          f"MEDIUM={n_m} ({n_m/total*100:.1f}%)")
 
     return all_pairs[:n_target]
 
@@ -357,6 +350,7 @@ def genera_ground_truth(df_mediato, ratio_negativi=2.0, random_state=42):
     return ground_truth, positivi, negativi
 
 
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -377,7 +371,11 @@ def main():
     df_sanificato_norm = pulizia_vin_avanzata(df_mediated_norm)
     print(f"Record post-pulizia: {len(df_sanificato_norm)}")
 
-    # 3. Genera Ground Truth
+    # 3. Salva dataset pulito (usato anche da blocking/generate.py)
+    df_sanificato_norm.to_csv(CLEANED_DATASET_PATH, index=False)
+    print(f"Dataset pulito salvato in: {CLEANED_DATASET_PATH}")
+
+    # 4. Genera Ground Truth (sull'intero mediated schema pulito)
     ground_truth_df, positivi, negativi = genera_ground_truth(
         df_sanificato_norm, ratio_negativi=GT_NEGATIVE_RATIO, random_state=RANDOM_SEED
     )
@@ -389,35 +387,24 @@ def main():
     ground_truth_df.to_csv(gt_path, index=False)
     print(f"\nGround Truth salvata in: {gt_path}")
 
-    # 5. Split GT -> train vs eval (STRATIFICATO)
-    GT_train, GT_eval = train_test_split(
+    # 5. Split GT -> train/val/test (70/10/20, STRATIFICATO)
+    train_set, temp_set = train_test_split(
         ground_truth_df,
         test_size=0.30,
         random_state=RANDOM_SEED,
         stratify=ground_truth_df['label']
     )
-    GT_eval.to_csv(GT_EVAL_PATH, index=False)
-
-    print(f"Split completato: Train={len(GT_train)}, Eval={len(GT_eval)}")
-
-    # 6. Split train -> train/val/test (70/15/15)
-    train_set, temp_set = train_test_split(
-        GT_train,
-        test_size=0.30,
-        random_state=RANDOM_SEED,
-        stratify=GT_train['label']
-    )
     val_set, test_set = train_test_split(
         temp_set,
-        test_size=0.50,
+        test_size=2/3,
         random_state=RANDOM_SEED,
         stratify=temp_set['label']
     )
 
     GT_SPLITS_DIR.mkdir(parents=True, exist_ok=True)
-    train_set.to_csv(GT_SPLITS_DIR / "train.csv", index=False)
-    val_set.to_csv(GT_SPLITS_DIR / "val.csv", index=False)
-    test_set.to_csv(GT_SPLITS_DIR / "test.csv", index=False)
+    train_set.to_csv(GT_TRAIN_PATH, index=False)
+    val_set.to_csv(GT_VAL_PATH, index=False)
+    test_set.to_csv(GT_TEST_PATH, index=False)
 
     print(f"Split train/val/test: {len(train_set)}/{len(val_set)}/{len(test_set)}")
     print("Generazione Ground Truth completata.")
