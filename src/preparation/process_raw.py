@@ -20,8 +20,7 @@ Usage:
 """
 
 import pandas as pd
-from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 
 from src.config import (
     RAW_DIR,
@@ -135,9 +134,10 @@ def main():
     print("=" * 60)
     print_hw_info()
 
-    # I due dataset sono indipendenti: elaborali in parallelo
-    from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    # 125+ GB di RAM e 32 core: entrambi i dataset ci stanno in memoria (~35 GB).
+    # ProcessPoolExecutor → vero parallelismo (bypassa il GIL),
+    # ogni processo sfrutta i core per le operazioni pandas vettorizzate.
+    with ProcessPoolExecutor(max_workers=2) as pool:
         fut_v = pool.submit(process_vehicles)
         fut_u = pool.submit(process_used_cars)
         fut_v.result()
