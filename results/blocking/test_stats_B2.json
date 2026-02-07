@@ -1,0 +1,12 @@
+{
+    "positives_in_test": 1184,
+    "positives_captured": 915,
+    "blocking_recall": 0.772804,
+    "n_test_pairs": 3552,
+    "n_candidates": 1993,
+    "reduction_ratio_vs_test": 0.438908,
+    "strategy": "B2",
+    "mfr_threshold": 0.95,
+    "model_threshold": 0.85,
+    "random_seed": 42
+}
