@@ -32,8 +32,8 @@ Allineare le sorgenti allo schema mediato.
 | **4.D** | Definire due strategie di blocking B1 e B2 | ✅ Done |
 | **4.E** | Definire regole di record linkage con libreria Python Record Linkage | ✅ Done |
 | **4.F** | Addestrare un modello usando la libreria Python Dedupe | ✅ Done |
-| **4.G** | Addestrare un modello con Ditto (https://github.com/MarcoNapoleone/FAIR-DA4ER) | ⬜ To Do |
-| **4.H** | Valutare prestazioni pipeline (B1-dedupe, B2-dedupe, B1-RecordLinkage, B2-RecordLinkage, B1-ditto, B2-ditto) in termini di precision, recall, F1-measure, tempi di training, tempi di inferenza | ⬜ To Do |
+| **4.G** | Addestrare un modello con Ditto (https://github.com/MarcoNapoleone/FAIR-DA4ER) | ✅ Done |
+| **4.H** | Valutare prestazioni pipeline (B1-dedupe, B2-dedupe, B1-RecordLinkage, B2-RecordLinkage, B1-ditto, B2-ditto) in termini di precision, recall, F1-measure, tempi di training, tempi di inferenza | ✅ Done |
 
 ---
 

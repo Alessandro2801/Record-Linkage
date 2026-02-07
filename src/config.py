@@ -60,7 +60,6 @@ GT_TEST_PATH = GT_SPLITS_DIR / "test.csv"
 GT_NEGATIVE_RATIO = 2.0
 RANDOM_SEED = 42
 VIN_MAX_DIFF = 3
-BLOCKING_SAMPLE_SIZE = 50_000
 BLOCKING_MFR_THRESHOLD = 0.95
 BLOCKING_MODEL_THRESHOLD = 0.85
 
@@ -172,16 +171,6 @@ def gt_split_path(split: str) -> Path:
 def blocking_strategy_dir(strategy: str) -> Path:
     """Directory di una strategia di blocking: storage/blocking/{B1|B2}/."""
     return BLOCKING_DIR / strategy
-
-
-def blocking_candidates_path(strategy: str) -> Path:
-    """Path legacy del CSV completo delle coppie candidate."""
-    return blocking_strategy_dir(strategy) / "candidates.csv"
-
-
-def blocking_split_path(strategy: str, split: str) -> Path:
-    """Path legacy di uno split (train/val/test) per una strategia di blocking."""
-    return blocking_strategy_dir(strategy) / f"{split}.csv"
 
 
 def blocking_test_candidates_path(strategy: str) -> Path:
