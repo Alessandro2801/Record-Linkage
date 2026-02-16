@@ -1,13 +1,23 @@
 # General
 .DS_Store
 
-# Datasets
-datasets/
-data/
-
-# Models
+# Dati e modelli (generati dalla pipeline, non versionati)
+storage/
 models/
 wandb/
+
+# Vendor Ditto — artefatti generati (non versionati)
+vendor/FAIR-DA4ER/ditto/checkpoints/
+vendor/FAIR-DA4ER/ditto/output/
+vendor/FAIR-DA4ER/ditto/input/
+vendor/FAIR-DA4ER/ditto/results_ditto/
+vendor/FAIR-DA4ER/ditto/data/er_magellan/
+vendor/FAIR-DA4ER/ditto/data/fair/
+vendor/FAIR-DA4ER/ditto/data/wdc/
+*.tfevents*
+
+# Risultati generati dalla pipeline
+results/
 
 # PDF files
 *.pdf
